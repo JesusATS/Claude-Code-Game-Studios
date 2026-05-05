@@ -259,29 +259,120 @@ func force_close_window() -> void:
 # ─── Private FSM Handlers ──────────────────────────────────────────────────
 
 ## ENCOUNTER_START → ROUND_START.
-## Initializes the turn queue for round 1 and immediately advances to TURN_START.
-## Story 002 replaces the stub queue with the full TPR + SPD-descending sort.
+## Builds the turn queue using TPR formula and SPD-descending sort.
+## Emits turn_order_changed, then immediately advances to TURN_START.
+## Called at the start of every round (rounds are rebuilt from scratch each time).
 func _process_round_start() -> void:
 	_state = State.ROUND_START
 	_active_queue_index = 0
-	_build_turn_queue_stub()
+	var living: Array[int] = _get_living_combatants()
+	var spd_min: int = _compute_spd_min(living)
+	_build_turn_queue(living, spd_min)
+	if _turn_queue.is_empty():
+		# All combatants incapacitated — should be caught by Story 006 terminal check
+		_process_encounter_end(&"VICTORY")
+		return
+	turn_order_changed.emit(_turn_queue.duplicate(), _turn_queue[0])
 	_process_turn_start()
 
 
-## Build a stub turn queue for Story 001.
-## Places party members (slots 1–N) first, then enemies (101–100+M).
-## Story 002 replaces this with the full TPR formula and SPD-descending sort.
-func _build_turn_queue_stub() -> void:  # Story 002
-	_turn_queue.clear()
+## Returns instance_ids of all living combatants (HP > 0) in encounter order.
+## Party slots first (1–N), then enemies (101+). Order is insertion order;
+## SPD sorting happens in _build_turn_queue().
+func _get_living_combatants() -> Array[int]:
+	var living: Array[int] = []
 	for i: int in range(_party_members.size()):
-		_turn_queue.append(i + 1)  # Party slots: 1, 2, 3, 4
-	for instance_id: int in _enemy_hp:
-		_turn_queue.append(instance_id)  # Enemy IDs: 101, 102, 103...
+		if _party_members[i].hp_current > 0:
+			living.append(i + 1)  # 1-based slot → instance_id
+	for iid: int in _enemy_hp:
+		if _enemy_hp[iid] > 0:
+			living.append(iid)
+	return living
+
+
+## Returns the effective SPD of a combatant (party or enemy).
+## Applies inheritance sum + status modifier via CharacterStatsUtil.effective_stat().
+## For enemies, inheritance_sum is always 0 (enemies have no inheritance system).
+func _get_effective_spd(instance_id: int) -> int:
+	if instance_id <= 4:
+		var member: CharacterData = _party_members[instance_id - 1]
+		var inheritance_sum: int = 0
+		for nio: NamedInheritanceObject in member.inheritances:
+			if nio.stat == &"spd":
+				inheritance_sum += nio.magnitude
+		var status_mod: int = se.get_modifier(instance_id, &"spd")
+		return CharacterStatsUtil.effective_stat(member.base_spd, inheritance_sum, status_mod)
+	else:
+		if not _enemy_data_map.has(instance_id):
+			push_warning("TimingCombatSystem._get_effective_spd(): unknown instance_id %d" % instance_id)
+			return 1
+		var enemy: EnemyData = _enemy_data_map[instance_id]
+		var status_mod: int = se.get_modifier(instance_id, &"spd")
+		return CharacterStatsUtil.effective_stat(enemy.base_spd, 0, status_mod)
+
+
+## Returns the minimum effective SPD across all living combatants.
+## Used as the denominator base in the TPR formula.
+func _compute_spd_min(living: Array[int]) -> int:
+	if living.is_empty():
+		return 1  # guard — never divide by zero in TPR
+	var min_spd: int = 99
+	for iid: int in living:
+		var spd: int = _get_effective_spd(iid)
+		if spd < min_spd:
+			min_spd = spd
+	return max(1, min_spd)  # clamp to [1, 99] — no zero denominator
+
+
+## Computes Turns Per Round for a combatant.
+## Formula: TPR = min(2, 1 + floor(spd_c / (spd_min × 1.5)))
+## When all combatants have equal SPD: floor(spd / (spd × 1.5)) = floor(0.666) = 0 → TPR = 1.
+## Result is clamped to [1, 2] — TPR is always at least 1.
+func _compute_tpr(spd_c: int, spd_min: int) -> int:
+	var threshold: float = float(spd_min) * 1.5
+	return mini(2, 1 + int(float(spd_c) / threshold))
+
+
+## Builds the frozen turn queue for the current round.
+## Two-pass construction:
+##   Pass 1: all living combatants, SPD descending (ties: lower instance_id first).
+##   Pass 2: only combatants with TPR = 2, same sort order.
+## The queue is frozen after this call; mid-round SPD changes do not affect it (AC-4).
+func _build_turn_queue(living: Array[int], spd_min: int) -> void:
+	_turn_queue.clear()
+	if living.is_empty():
+		return
+	# Pre-compute SPD and TPR to avoid redundant calls inside sort comparator
+	var spd_cache: Dictionary[int, int] = {}
+	var tpr_cache: Dictionary[int, int] = {}
+	for iid: int in living:
+		var spd: int = _get_effective_spd(iid)
+		spd_cache[iid] = spd
+		tpr_cache[iid] = _compute_tpr(spd, spd_min)
+	# Sort: SPD descending; ties broken by instance_id ascending
+	# (party slot 1 < slot 2 < ... < enemy slot 1 < enemy slot 2)
+	var sorted: Array[int] = living.duplicate()
+	sorted.sort_custom(func(a: int, b: int) -> bool:
+		var spd_a: int = spd_cache[a]
+		var spd_b: int = spd_cache[b]
+		if spd_a != spd_b:
+			return spd_a > spd_b  # higher SPD sorts first
+		return a < b              # lower instance_id wins ties
+	)
+	# Pass 1: every living combatant appears once
+	for iid: int in sorted:
+		_turn_queue.append(iid)
+	# Pass 2: combatants with TPR = 2 appear a second time
+	for iid: int in sorted:
+		if tpr_cache[iid] == 2:
+			_turn_queue.append(iid)
 
 
 ## ROUND_START → TURN_START.
 ## Sets TCS to the active combatant's state (PLAYER_ACTION or ENEMY_ACTION).
 ## Emits turn_started signal for HUD display.
+## AC-6: incapacitated combatants (HP = 0) are silently skipped via TURN_SKIPPED.
+## AC-7: combatants with an active stun/skip status are silently skipped via TURN_SKIPPED.
 func _process_turn_start() -> void:
 	_state = State.TURN_START
 	if _active_queue_index >= _turn_queue.size():
@@ -292,8 +383,15 @@ func _process_turn_start() -> void:
 	var active_id: int = _turn_queue[_active_queue_index]
 	var is_player_turn: bool = active_id <= 4  # Party IDs are 1–4 (ADR-0006 Rule 2)
 
-	# Story 009 stub: turn-skip status check belongs here
-	# if se.is_turn_skipped(active_id): _process_turn_skipped(); return  # Story 009
+	# AC-6: skip if combatant was incapacitated since the queue was built
+	if _is_incapacitated(active_id):
+		_process_turn_skipped()
+		return
+
+	# AC-7: skip if a status effect (STUNNED, etc.) requests a turn skip
+	if se.check_turn_skip(active_id):
+		_process_turn_skipped()
+		return
 
 	turn_started.emit(active_id, is_player_turn)
 
@@ -377,19 +475,18 @@ func _process_turn_end() -> void:  # Story 002, Story 006
 	if _active_queue_index >= _turn_queue.size():
 		_process_round_end()
 	else:
-		# Story 002 stub: real path advances to TURN_START for the next combatant
-		# For Story 001, skip additional turns and go straight to ROUND_END
-		_process_round_end()  # Story 002 — replace with: _process_turn_start()
+		_process_turn_start()
 
 
-## TURN_END → ROUND_END.
-## Story 006/002: real path checks terminal conditions and rebuilds queue.
-## Stub: always transitions to ENCOUNTER_END for test completeness.
-func _process_round_end() -> void:  # Story 002, Story 006
+## TURN_END → ROUND_END → ROUND_START.
+## Increments the round counter and rebuilds the turn queue for the next round.
+## Story 006: real path inserts a terminal condition check (Victory/Defeat) here
+## before rebuilding the queue — placeholder skipped for now.
+func _process_round_end() -> void:  # Story 006 adds terminal check
 	_state = State.ROUND_END
-	# Story 002 stub: real path increments _round_number and rebuilds turn queue
-	# Story 006 stub: real path checks victory/defeat before advancing
-	_process_encounter_end(&"VICTORY")  # Story 006 — replace with real terminal check
+	_round_number += 1
+	# Story 006 stub: check all-enemy HP = 0 (VICTORY) or all-party HP = 0 (DEFEAT)
+	_process_round_start()
 
 
 ## ROUND_END → ENCOUNTER_END → IDLE.
@@ -421,9 +518,18 @@ func _process_encounter_end(result: StringName) -> void:
 	_state = State.IDLE
 
 
+## Returns true if the combatant has HP = 0.
+## Used by _process_turn_start() to skip incapacitated queue slots (AC-6).
+func _is_incapacitated(instance_id: int) -> bool:
+	if instance_id <= 4:
+		return _party_members[instance_id - 1].hp_current == 0
+	return _enemy_hp.get(instance_id, 0) == 0
+
+
 ## TURN_START → TURN_SKIPPED → TURN_END.
-## Story 009 implements status-effect-driven turn skip (STUNNED, etc.).
-func _process_turn_skipped() -> void:  # Story 009
+## Entered when the active combatant is incapacitated (AC-6) or has a turn-skip
+## status effect (AC-7). Emits no turn_started signal — the turn is consumed silently.
+func _process_turn_skipped() -> void:
 	_state = State.TURN_SKIPPED
 	_process_turn_end()
 
@@ -481,9 +587,22 @@ func _party_instance_id(member: CharacterData) -> int:
 # ─── Window Frame Calculation (Story 002) ──────────────────────────────────
 
 ## Compute the action timing window width in frames for the active combatant.
-## Story 001 returns DEFAULT_ACTION_WINDOW_FRAMES.
-## Story 002 replaces this with CharacterStatsUtil.timing_window_frames(active_member).
-func _compute_action_window_frames() -> int:  # Story 002
+## Uses CharacterStatsUtil.timing_window_frames(effective_flux) — Formula 2a (ADR-0007).
+## The active combatant at timing window open is always a party member (player turn only).
+## Guard: falls back to DEFAULT_ACTION_WINDOW_FRAMES for enemy active IDs (should not occur).
+func _compute_action_window_frames() -> int:
+	var active_id: int = _turn_queue[_active_queue_index]
+	if active_id <= 4:
+		var member: CharacterData = _party_members[active_id - 1]
+		var inheritance_sum: int = 0
+		for nio: NamedInheritanceObject in member.inheritances:
+			if nio.stat == &"flux":
+				inheritance_sum += nio.magnitude
+		var status_mod: int = se.get_modifier(active_id, &"flux")
+		var effective_flux: int = CharacterStatsUtil.effective_stat(member.base_flux, inheritance_sum, status_mod)
+		return CharacterStatsUtil.timing_window_frames(effective_flux)
+	# Guard: enemy IDs don't have FLUX — fall back to default
+	push_warning("TimingCombatSystem._compute_action_window_frames(): active_id %d is not a party member" % active_id)
 	return DEFAULT_ACTION_WINDOW_FRAMES
 
 # ─── Enemy AI Snapshot (Story 008) ─────────────────────────────────────────
