@@ -3,9 +3,9 @@
 > **Story**: production/epics/input-and-timing-detection/story-003-itd-input-routing.md
 > **Type**: Integration (Smoke Test)
 > **Implementation Date**: 2026-05-05
-> **Date**: [To be filled by tester]
-> **Tester**: [To be filled]
-> **Verdict**: [ ] PASS [ ] FAIL [ ] BLOCKED
+> **Date**: 2026-05-05
+> **Tester**: Jesus Gallegos Ontiveros
+> **Verdict**: [x] PASS [ ] FAIL [ ] BLOCKED
 
 ---
 
@@ -171,13 +171,13 @@ Before running this smoke test, verify:
 
 | AC | Requirement | Status | Notes |
 |---|---|---|---|
-| AC-R1 | InputMap `timing_confirm` separate | ✓/✗ | |
-| AC-R2 | ITD node placement above HUD | ✓/✗ | |
-| AC-R3 | Timing confirm reaches ITD | ✓/✗ | |
-| AC-R4 | HUD disabled during window | ✓/✗ | Primary/Fallback: |
-| AC-R5 | HUD restored after window | ✓/✗ | |
-| AC-R6 | Passive HUD Controls MOUSE_FILTER_IGNORE | ✓/✗ | |
-| AC-R7 | Dual-focus keyboard/gamepad independence | ✓/✗ | |
+| AC-R1 | InputMap `timing_confirm` separate | ✓ PASS | timing_confirm + ui_accept confirmed as separate entries |
+| AC-R2 | ITD node placement above HUD | ✓ PASS | Verified statically — ITD at index 0, HUDSystem at index 3 in .tscn |
+| AC-R3 | Timing confirm reaches ITD | ✓ PASS | Implied by AC-R4 pass — input_result signal reached ITD, not consumed by HUD |
+| AC-R4 | HUD disabled during window | ✓ PASS | **PRIMARY implementation works** — set_process_input(false) on CanvasLayer suppresses child Control _gui_input() in Godot 4.6 |
+| AC-R5 | HUD restored after window | ✓ PASS | Implied by AC-R4 pass — set_process_input(true) restores HUD input |
+| AC-R6 | Passive HUD Controls MOUSE_FILTER_IGNORE | N/A | No passive HUD Controls exist yet — deferred to HUD System epic |
+| AC-R7 | Dual-focus keyboard/gamepad independence | ✓ PASS | grab_focus() sets keyboard/gamepad focus; mouse hover does not hijack input focus |
 
 ---
 
@@ -187,13 +187,13 @@ Before running this smoke test, verify:
 
 1. **set_process_input(false) on CanvasLayer**:
    - **Expected**: Suppresses `_gui_input()` on all child Controls
-   - **Verified**: ✓ YES / ✗ NO / ⚠️ PARTIAL (fallback used)
-   - **Details**: _____________________________
+   - **Verified**: ✓ YES — PRIMARY implementation confirmed working in Godot 4.6
+   - **Details**: CanvasLayer.set_process_input(false) correctly blocks child Control input during timing window
 
 2. **Recursive Control disable (Godot 4.5+ / 4.6)**:
    - **Expected**: Single `set_process_input(false)` call propagates to entire subtree
-   - **Verified**: ✓ YES / ✗ NO
-   - **Details**: _____________________________
+   - **Verified**: ✓ YES — confirmed via AC-R4 smoke test
+   - **Details**: No fallback required; recursive disable propagates correctly in Godot 4.6
 
 **Engine Version Confirmed**: Godot 4.6 (✓ matches CLAUDE.md pinned version)
 
@@ -201,19 +201,18 @@ Before running this smoke test, verify:
 
 ## Sign-Off
 
-**Smoke Test Verdict**: [ ] PASS [ ] FAIL [ ] FALLBACK REQUIRED
+**Smoke Test Verdict**: [x] PASS [ ] FAIL [ ] FALLBACK REQUIRED
 
-**Tester Name**: ____________________________
+**Tester Name**: Jesus Gallegos Ontiveros
 
-**Tester Signature/Approval**: ____________________________
-
-**Date**: ____________________________
+**Date**: 2026-05-05
 
 **Notes & Deviations**:
-- Primary implementation used: ✓ / ✗
-- Fallback implementation required: ✓ / ✗
-- Any engineering blockers discovered: [Describe]
-- Follow-up required: [Yes/No — describe]
+- Primary implementation used: ✓
+- Fallback implementation required: ✗
+- Any engineering blockers discovered: None
+- AC-R6 deferred: No passive HUD Controls exist yet — will be verified during HUD System epic
+- Follow-up required: No
 
 ---
 

@@ -1,7 +1,7 @@
 # Story 003: ITD Input Routing — HUD Isolation, Dual-Focus, and Scene Wiring
 
 > **Epic**: Input & Timing Detection
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Foundation
 > **Type**: Integration
 > **Manifest Version**: 2026-05-04
