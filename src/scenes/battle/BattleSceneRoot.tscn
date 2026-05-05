@@ -1,0 +1,19 @@
+[gd_scene load_steps=3 format=3 uid="uid://c05yudjtj8awp"]
+
+[ext_resource type="Script" path="res://src/scenes/battle/battle_scene_root.gd" id="1_vb0f0"]
+[ext_resource type="Script" path="res://src/foundation/input/input_timing_detector.gd" id="2_1y5xv"]
+
+[node name="BattleSceneRoot" type="Node"]
+script = ExtResource("1_vb0f0")
+
+[node name="InputTimingDetector" type="Node" parent="."]
+script = ExtResource("2_1y5xv")
+
+[node name="TimingCombatSystem" type="Node" parent="."]
+
+[node name="AbilitySystem" type="Node" parent="."]
+
+[node name="HUDSystem" type="CanvasLayer" parent="."]
+layer = 10
+
+[node name="HUDContainer" type="Node2D" parent="HUDSystem"]
