@@ -1,0 +1,8 @@
+# Integration tests go here — one subdirectory per system pair or scenario
+# Examples:
+#   tests/integration/combat/tcs_ability_system_test.gd
+#   tests/integration/combat/status_effects_round_trip_test.gd
+#   tests/integration/foundation/resource_registry_smoke_test.gd
+#
+# Required before story is marked Done for all Integration-type stories.
+# See tests/README.md for naming conventions.

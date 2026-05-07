@@ -1,0 +1,14 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/core/character_stats/character_data.gd" id="1_fixture"]
+
+[resource]
+script = ExtResource("1_fixture")
+id = &"char_ne_fixture"
+display_name = "Ne (Test Fixture)"
+base_hp = 10
+base_atk = 5
+base_def = 5
+base_spd = 5
+base_flux = 5
+perfect_hit_multiplier = 1.0

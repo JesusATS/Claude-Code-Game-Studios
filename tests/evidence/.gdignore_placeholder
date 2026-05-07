@@ -1,0 +1,4 @@
+# Manual test evidence goes here — screenshots and sign-off records
+# Required for Visual/Feel and UI story types before marking Done.
+# Naming: [system]-[feature]-[date].md or [system]-[feature]-[date].png
+# See tests/README.md for story type → evidence mapping.

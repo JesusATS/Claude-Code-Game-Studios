@@ -37,7 +37,7 @@
 #   Each entry: name, status, source, referenced_by[], attributes{}, added, revised
 
 version: 1
-last_updated: ""
+last_updated: "2026-04-28"
 
 # ─── ENTITIES ────────────────────────────────────────────────────────────────
 # Named game-world objects: enemies, NPCs, characters, factions, bosses.
@@ -48,7 +48,151 @@ last_updated: ""
 # Attribute fields: any key stats that could appear in another GDD
 #   (health, damage, drops, faction, etc.)
 
-entities: []
+entities:
+  - name: Clawd
+    status: active
+    archetype: Anchor
+    source: design/gdd/character-stats-and-growth.md
+    referenced_by:
+      - design/gdd/character-stats-and-growth.md
+      - design/gdd/party-composition-manager.md
+      - design/gdd/timing-combat-system.md
+    hp_max: 120
+    atk: 12
+    def: 16
+    spd: 11
+    flux: 16
+    perfect_hit_multiplier: 1.3
+    added: "2026-04-22"
+    revised: ""
+
+  - name: Ne
+    status: active
+    archetype: Blade
+    source: design/gdd/character-stats-and-growth.md
+    referenced_by:
+      - design/gdd/character-stats-and-growth.md
+      - design/gdd/party-composition-manager.md
+      - design/gdd/timing-combat-system.md
+    hp_max: 80
+    atk: 18
+    def: 8
+    spd: 20
+    flux: 8
+    perfect_hit_multiplier: 1.6
+    added: "2026-04-22"
+    revised: ""
+
+  - name: Setsuna
+    status: active
+    archetype: Thread
+    source: design/gdd/character-stats-and-growth.md
+    referenced_by:
+      - design/gdd/character-stats-and-growth.md
+      - design/gdd/party-composition-manager.md
+      - design/gdd/timing-combat-system.md
+    hp_max: 100
+    atk: 13
+    def: 12
+    spd: 15
+    flux: 12
+    perfect_hit_multiplier: 1.2
+    added: "2026-04-22"
+    revised: ""
+
+  - name: Boing-Boing
+    status: active
+    encounter_role: SKIRMISHER
+    source: design/gdd/enemy-system.md
+    referenced_by:
+      - design/gdd/enemy-system.md
+      - design/gdd/timing-combat-system.md
+    hp_max: 35
+    atk: 9
+    def: 4
+    spd: 20
+    flux: 16
+    tempo: 8
+    notes: "Intro enemy, Episode 1. Wide block window (~24 frames). Earns double
+      turns when Clawd (SPD 11) is SPD_min — teaches two-block rounds."
+    added: "2026-04-27"
+    revised: ""
+
+  - name: Zarg
+    status: active
+    encounter_role: BRUISER
+    source: design/gdd/enemy-system.md
+    referenced_by:
+      - design/gdd/enemy-system.md
+      - design/gdd/timing-combat-system.md
+    hp_max: 100
+    atk: 14
+    def: 13
+    spd: 9
+    flux: 8
+    tempo: 20
+    notes: "Episode 1 mid-section. High DEF makes FRACTURE feel necessary. Tight
+      FLUX (8) + high TEMPO (20) demand precision in both attack and block phases.
+      Setsuna earns double turns whenever Zarg is present (SPD_min drops to 9)."
+    added: "2026-04-27"
+    revised: ""
+
+  - name: Mother Zarg
+    status: active
+    encounter_role: APEX
+    source: design/gdd/enemy-system.md
+    referenced_by:
+      - design/gdd/enemy-system.md
+      - design/gdd/timing-combat-system.md
+    hp_max: 280
+    hp_max_status: PROVISIONAL  # minimum viable value for fire_breath(MOD 3) to fire; revise after TCS damage formula
+    atk: 20
+    def: 15
+    spd: 7
+    flux: 12
+    tempo: 24
+    notes: "Episode 2 boss. Fire attributes; applies DISSONANCE. Triggers double
+      turns for entire party (6:1 action ratio). HP 280 is PROVISIONAL (raised from
+      140 which was insufficient to reach fire_breath threshold) — revise after
+      Timing Combat System GDD defines damage formula (OQ-1)."
+    added: "2026-04-27"
+    revised: "2026-04-28"
+
+  - name: Sectarian
+    status: active
+    encounter_role: SUPPORT
+    source: design/gdd/enemy-system.md
+    referenced_by:
+      - design/gdd/enemy-system.md
+    hp_max: 70
+    atk: 10
+    def: 10
+    spd: 13
+    flux: 12
+    tempo: 17
+    notes: "Episode 1 support enemy. Buffs BRUISER/WARDEN allies; curses party.
+      Requires ≥1 BRUISER or WARDEN present per encounter composition rules.
+      Priority target — encounter teaches kill-SUPPORT-first."
+    added: "2026-04-27"
+    revised: ""
+
+  - name: Sectarian Leader
+    status: active
+    encounter_role: APEX
+    source: design/gdd/enemy-system.md
+    referenced_by:
+      - design/gdd/enemy-system.md
+    hp_max: 180
+    atk: 22
+    def: 6
+    spd: 15
+    flux: 14
+    tempo: 24
+    notes: "Episode 1 final boss. Solo APEX encounter. TEMPO 24 → 8-frame block
+      window (~133ms, same as Mother Zarg). Low DEF (6) is the tactical vulnerability.
+      fires final_invocation at SELF_HP_RATIO_BELOW(0.25)."
+    added: "2026-04-27"
+    revised: "2026-04-28"
 
 # Example (remove when first real entry is added):
 #
@@ -106,7 +250,201 @@ items: []
 #   output_range[min, max], added
 # Optional: expression (the actual formula), notes
 
-formulas: []
+formulas:
+  - name: TURNS_PER_ROUND
+    status: active
+    source: design/gdd/character-stats-and-growth.md
+    referenced_by:
+      - design/gdd/character-stats-and-growth.md
+      - design/gdd/enemy-system.md
+      - design/gdd/timing-combat-system.md
+    variables:
+      - SPD_c           # acting combatant's SPD stat (1–99)
+      - SPD_min         # lowest SPD among all active combatants (1–99)
+      - SWIFT_THRESHOLD # tunable float, default 1.5
+    output_range: [1, 2]
+    expression: "min(2, 1 + floor(SPD_c / (SPD_min × SWIFT_THRESHOLD)))"
+    notes: "Locked at round start — does not recalculate mid-round. Feeds into
+      Timing Combat System turn order and HUD turn strip."
+    added: "2026-04-22"
+    revised: ""
+
+  - name: TIMING_WINDOW_FRAMES
+    status: active
+    source: design/gdd/character-stats-and-growth.md
+    referenced_by:
+      - design/gdd/character-stats-and-growth.md
+      - design/gdd/input-and-timing-detection.md
+      - design/gdd/enemy-system.md
+    variables:
+      - FLUX_c                  # acting combatant's FLUX stat (1–99)
+      - WINDOW_SCALE_FACTOR     # tunable float, default 1.0
+      - TIMING_WINDOW_FRAMES_MAX # ceiling clamp, default 30
+    output_range: [2, 30]
+    expression: "max(2, min(TIMING_WINDOW_FRAMES_MAX, round(FLUX_c × WINDOW_SCALE_FACTOR)))"
+    notes: "Floor of 2 frames (unreactable below). Ceiling of 30 frames (~500ms).
+      Output feeds directly into Input & Timing Detection GDD and Timing Combat System."
+    added: "2026-04-22"
+    revised: ""
+
+  - name: INHERITANCE_MAX
+    status: active
+    source: design/gdd/character-stats-and-growth.md
+    referenced_by:
+      - design/gdd/character-stats-and-growth.md
+    variables:
+      - BASE_STAT          # recipient's base stat at episode start (int)
+      - INHERITANCE_CEILING # tunable float, default 0.15
+    output_range: [1, 15]
+    expression: "max(1, round(BASE_STAT × INHERITANCE_CEILING))"
+    notes: "Floor of 1 prevents zero-magnitude inheritance objects. BASE_STAT is
+      always the episode-start base, not the effective stat at moment of departure.
+      Output feeds into Guest Character System GDD."
+    added: "2026-04-22"
+    revised: ""
+
+  - name: BLOCK_WINDOW_FRAMES
+    status: active
+    source: design/gdd/character-stats-and-growth.md
+    referenced_by:
+      - design/gdd/character-stats-and-growth.md
+      - design/gdd/input-and-timing-detection.md
+      - design/gdd/enemy-system.md
+    variables:
+      - BLOCK_WINDOW_BASE    # base frame count, default 32
+      - TEMPO_enemy          # enemy-exclusive TEMPO stat (1–99)
+      - WINDOW_SCALE_FACTOR  # global accessibility scale, default 1.0
+    output_range: [2, 30]
+    expression: "max(2, min(30, round((BLOCK_WINDOW_BASE - TEMPO_enemy) × WINDOW_SCALE_FACTOR)))"
+    notes: "Block window duration in frames. Higher enemy TEMPO → shorter block window
+      (harder to block). Floor of 2 matches TIMING_WINDOW_FRAMES floor for
+      consistency. Source GDD owns TEMPO; Input & Timing Detection GDD consumes
+      the output as its BLOCK mode window duration."
+    added: "2026-04-23"
+    revised: ""
+
+  - name: PERFECT_ZONE_SIZE
+    status: active
+    source: design/gdd/input-and-timing-detection.md
+    referenced_by:
+      - design/gdd/input-and-timing-detection.md
+      - design/gdd/hud-system.md
+    variables:
+      - W                  # window duration (TIMING_WINDOW_FRAMES or BLOCK_WINDOW_FRAMES, 2–30)
+      - PERFECT_HIT_RATIO  # fraction of window designated as Perfect zone, default 0.25
+    output_range: [1, 10]
+    expression: "max(1, floor(W × PERFECT_HIT_RATIO))"
+    notes: "Number of trailing frames in a window that qualify for a PERFECT grade.
+      Floor of 1 guarantees a non-zero Perfect zone even at minimum window size.
+      At W=30 and ratio=0.35 (max): 10 frames. At W=8 and ratio=0.20 (min): 1 frame.
+      Feeds into grade classification logic in Input & Timing Detection FSM."
+    added: "2026-04-23"
+    revised: ""
+
+  - name: NORMALIZED_TO_DB
+    status: active
+    source: design/gdd/audio-system.md
+    referenced_by:
+      - design/gdd/audio-system.md
+    variables:
+      - n    # normalized volume from slider (float, [0.0, 1.0])
+    output_range: [-INF, 0.0]
+    expression: "-INF (if n = 0.0) / 20 × log10(n) (if n > 0.0)"
+    notes: "Converts Menu & Settings System slider value to AudioServer dB.
+      GDScript built-in linear_to_db(n) implements this including the -INF
+      case. Inverse is db_to_linear(dB) for get_bus_volume(). Menu & Settings
+      System GDD must reference this formula when specifying volume slider
+      behaviour. Do not apply an epsilon floor — n=0.0 must reach true silence."
+    added: "2026-04-24"
+    revised: ""
+
+  - name: STATUS_MOD
+    status: active
+    source: design/gdd/status-effects.md
+    referenced_by:
+      - design/gdd/status-effects.md
+      - design/gdd/timing-combat-system.md
+    variables:
+      - modifier_value    # signed int per active effect entry (−30 to +30)
+      - active_effects    # Array[ActiveStatusEffect] filtered by stat_affected
+    output_range: [-60, 60]
+    expression: "sum(modifier_value for all active effects where stat_affected == queried_stat)"
+    notes: "Status modifier contribution to the effective stat formula. Returns 0 if no
+      effects are active for this combatant+stat. Exposed as get_modifier(combatant_id,
+      stat) in the Status Effects public API (renamed from get_stat_modifier in SE RP1,
+      2026-05-02). Timing Combat System calls this before every stat-dependent calculation.
+      Feeds into the effective_stat formula owned by Character Stats & Growth."
+    added: "2026-04-24"
+    revised: "2026-05-02"
+
+  - name: INHERITED_TIMING_WINDOW_FRAMES
+    status: active
+    source: design/gdd/ability-system.md
+    referenced_by:
+      - design/gdd/ability-system.md
+    variables:
+      - FLUX_c          # using character's effective FLUX (1–99)
+      - flux_offset     # signed integer from AbilityData, authored at design time (−15 to +15)
+      - WINDOW_SCALE_FACTOR     # global accessibility scale (registered constant)
+      - TIMING_WINDOW_FRAMES_MAX # ceiling clamp (registered constant, default 30)
+    output_range: [2, 30]
+    expression: "max(2, min(TIMING_WINDOW_FRAMES_MAX, round((FLUX_c + flux_offset) × WINDOW_SCALE_FACTOR)))"
+    notes: "Timing window for inherited abilities. flux_offset encodes the guest's FLUX fingerprint
+      relative to a representative recipient (Setsuna, FLUX=12). A negative offset narrows the window
+      below the character's native FLUX; a positive offset widens it. Clamp authored flux_offset
+      to ±15 to prevent degenerate windows. Feeds into Timing Combat System alongside
+      TIMING_WINDOW_FRAMES (native abilities)."
+    added: "2026-04-24"
+    revised: ""
+
+  - name: attack_damage
+    status: active
+    source: design/gdd/timing-combat-system.md
+    referenced_by:
+      - design/gdd/timing-combat-system.md
+    variables:
+      - ATK_eff   # attacker ATK after status modifiers (1–99)
+      - DEF_eff   # defender DEF after status modifiers (1–99)
+      - grade_multiplier  # MISS=0, HIT=1.0, PERFECT=PHM (1.2–1.6)
+    output_range: [0, 147]
+    expression: "MISS: 0 / Otherwise: floor(max(1, ATK_eff − DEF_eff) × grade_multiplier)"
+    notes: "Primary attack damage formula. max(1, base) applies before grade_multiplier.
+      floor() applies to the full product. MISS bypasses the formula entirely (0 damage).
+      Practical Episode 1 range: 1–30 per hit. Depends on STATUS_MOD for effective stats."
+    added: "2026-04-28"
+    revised: ""
+
+  - name: block_mitigation_hit
+    status: active
+    source: design/gdd/timing-combat-system.md
+    referenced_by:
+      - design/gdd/timing-combat-system.md
+    variables:
+      - full_damage  # enemy resolved damage before mitigation (int, 1–∞)
+    output_range: [0, 999]
+    expression: "floor(full_damage × 0.5)"
+    notes: "HIT grade block mitigation. MISS block = full_damage (no formula).
+      PERFECT block = 0 (no formula). Odd full_damage rounds down, party absorbs
+      the extra point. Practical Episode 1 range: 0–40 per hit."
+    added: "2026-04-28"
+    revised: ""
+
+  - name: HP_RATIO
+    status: active
+    source: design/gdd/character-stats-and-growth.md
+    referenced_by:
+      - design/gdd/character-stats-and-growth.md
+      - design/gdd/enemy-system.md
+    variables:
+      - HP_current  # current HP (0 to HP_max)
+      - HP_max      # maximum HP (positive integer)
+    output_range: [0.0, 1.0]
+    expression: "HP_current / HP_max"
+    notes: "Maps to condition states: >=0.75=Unwounded, <0.75=Pressured, <0.50=Bloodied,
+      <0.25=Near-Breaking, =0=Incapacitated. Enemy-only display; party HP shown as
+      numeric current/max. Feeds into Enemy System and HUD System."
+    added: "2026-04-22"
+    revised: ""
 
 # Example:
 #
@@ -139,7 +477,260 @@ formulas: []
 #
 # Required fields: name, status, source, referenced_by, value, unit, added
 
-constants: []
+constants:
+  - name: FLUX_INHERITANCE_MIN
+    status: active
+    source: design/gdd/character-stats-and-growth.md
+    referenced_by:
+      - design/gdd/character-stats-and-growth.md
+    value: 2
+    unit: frames (FLUX bonus from Named Inheritance Object)
+    safe_range: "1 – 4 frames"
+    notes: "Minimum magnitude for FLUX-targeting Named Inheritance Objects. Prevents
+      sub-perceptual (1-frame) FLUX scars that players cannot detect. Established
+      during character-stats-and-growth design-review (AC-23)."
+    added: "2026-04-23"
+    revised: ""
+
+  - name: BLOCK_WINDOW_BASE
+    status: active
+    source: design/gdd/character-stats-and-growth.md
+    referenced_by:
+      - design/gdd/character-stats-and-growth.md
+      - design/gdd/input-and-timing-detection.md
+      - design/gdd/enemy-system.md
+    value: 32
+    unit: frames (numerator before TEMPO subtraction)
+    safe_range: "24 – 40 frames"
+    notes: "Base frame count in BLOCK_WINDOW_FRAMES formula before TEMPO is subtracted.
+      At TEMPO=0 and WINDOW_SCALE_FACTOR=1.0, block window equals this value (clamped to 30).
+      Increasing this makes blocking easier across all enemies."
+    added: "2026-04-23"
+    revised: ""
+
+  - name: PERFECT_HIT_RATIO
+    status: active
+    source: design/gdd/input-and-timing-detection.md
+    referenced_by:
+      - design/gdd/input-and-timing-detection.md
+      - design/gdd/hud-system.md
+    value: 0.25
+    unit: fraction of window (0.0–1.0)
+    safe_range: "0.20 – 0.35"
+    notes: "Fraction of a timing window designated as the Perfect grade zone (trailing
+      frames). Used in PERFECT_ZONE_SIZE formula. Below 0.20: Ne (FLUX=8) gets a
+      1-frame Perfect zone that is effectively frame-perfect. Above 0.35: 200ms+
+      Perfect zones that undermine rhythmic tension."
+    added: "2026-04-23"
+    revised: ""
+
+  - name: BLOCK_FORGIVENESS_FRAMES
+    status: active
+    source: design/gdd/input-and-timing-detection.md
+    referenced_by:
+      - design/gdd/input-and-timing-detection.md
+    value: 1
+    unit: frames post-window (grace period)
+    safe_range: "0 – 2 frames"
+    notes: "Post-window grace period for BLOCK mode only. Inputs within this frame
+      count after BLOCK_WINDOW expires grade as HIT (not PERFECT). ACTION mode
+      has no forgiveness window — misses are immediate. At 0: strict BLOCK (no
+      grace). At 2: ~33ms forgiveness. Feeds into BLOCK_FORGIVENESS FSM state."
+    added: "2026-04-23"
+    revised: ""
+
+  - name: SWIFT_THRESHOLD
+    status: active
+    source: design/gdd/character-stats-and-growth.md
+    referenced_by:
+      - design/gdd/character-stats-and-growth.md
+      - design/gdd/enemy-system.md
+      - design/gdd/timing-combat-system.md
+    value: 1.5
+    unit: ratio (SPD_c / SPD_min)
+    safe_range: "1.2 – 3.0"
+    notes: "SPD ratio required for a combatant to earn a second turn per round.
+      Used in TURNS_PER_ROUND formula. Also referenced by Timing Combat System."
+    added: "2026-04-22"
+    revised: ""
+
+  - name: WINDOW_SCALE_FACTOR
+    status: active
+    source: design/gdd/character-stats-and-growth.md
+    referenced_by:
+      - design/gdd/character-stats-and-growth.md
+      - design/gdd/input-and-timing-detection.md
+      - design/gdd/enemy-system.md
+    value: 1.0
+    unit: multiplier
+    safe_range: "0.6 – 1.6"
+    notes: "Global scale applied to FLUX when calculating TIMING_WINDOW_FRAMES.
+      Primary accessibility tuning lever. Referenced by Input & Timing Detection GDD."
+    added: "2026-04-22"
+    revised: ""
+
+  - name: TIMING_WINDOW_FRAMES_MAX
+    status: active
+    source: design/gdd/character-stats-and-growth.md
+    referenced_by:
+      - design/gdd/character-stats-and-growth.md
+      - design/gdd/input-and-timing-detection.md
+    value: 30
+    unit: frames (at 60fps ≈ 500ms)
+    safe_range: "20 – 45 frames"
+    notes: "Ceiling clamp for TIMING_WINDOW_FRAMES. Prevents windows so wide they
+      break rhythmic feel. Referenced by Input & Timing Detection GDD."
+    added: "2026-04-22"
+    revised: ""
+
+  - name: MAX_CHARGE
+    status: active
+    source: design/gdd/timing-combat-system.md
+    referenced_by:
+      - design/gdd/ability-system.md
+      - design/gdd/timing-combat-system.md
+      - design/gdd/hud-system.md
+    value: 6
+    unit: CC units (integer)
+    safe_range: "4 – 8"
+    notes: "Combo Charge ceiling. At 6: requires 3 PERFECT attacks to fill; a 3-cost Inherited
+      spend leaves 3 CC remaining, preserving optionality. Below 4 fills in 2 PERFECT attacks
+      (single-round saturation). Above 8 makes CC feel inaccessible. Owned by TCS; read by
+      HUD System for CC display. Updated 4→6 in TCS Revision Pass 4 (2026-04-30)."
+    added: "2026-04-24"
+    revised: "2026-05-02"
+
+  - name: MAX_PARTY_SIZE
+    status: active
+    source: design/gdd/party-composition-manager.md
+    referenced_by:
+      - design/gdd/party-composition-manager.md
+      - design/gdd/timing-combat-system.md
+      - design/gdd/hud-system.md
+    value: 4
+    unit: slots (integer)
+    safe_range: "Fixed at 4 for Lux Aeterna — not a runtime tuning knob"
+    notes: "Total party size: 3 permanent core slots + 1 guest slot. Referenced by
+      Timing Combat System (turn order list length), HUD System (portrait strip
+      layout), and Save System (snapshot array size). Must be defined as a
+      project-level GDScript constant — never hardcoded as 4 in downstream systems."
+    added: "2026-04-24"
+    revised: ""
+
+  - name: INHERITANCE_CEILING
+    status: active
+    source: design/gdd/character-stats-and-growth.md
+    referenced_by:
+      - design/gdd/character-stats-and-growth.md
+    value: 0.15
+    unit: fraction of base stat
+    safe_range: "0.10 – 0.25"
+    notes: "Maximum Named Inheritance Object magnitude as a fraction of the
+      recipient's base stat. Used in INHERITANCE_MAX formula. Referenced by
+      Guest Character System GDD."
+    added: "2026-04-22"
+    revised: ""
+
+  - name: HP_THRESHOLD_PRESSURED
+    status: active
+    source: design/gdd/character-stats-and-growth.md
+    referenced_by:
+      - design/gdd/character-stats-and-growth.md
+      - design/gdd/enemy-system.md
+      - design/gdd/hud-system.md
+    value: 0.75
+    unit: HP ratio (0.0–1.0)
+    safe_range: "0.65 – 0.85"
+    notes: "Enemy HP ratio below which condition state becomes Pressured. Used
+      in HP_RATIO formula condition mapping. Referenced by Enemy System and HUD System."
+    added: "2026-04-22"
+    revised: ""
+
+  - name: HP_THRESHOLD_BLOODIED
+    status: active
+    source: design/gdd/character-stats-and-growth.md
+    referenced_by:
+      - design/gdd/character-stats-and-growth.md
+      - design/gdd/enemy-system.md
+      - design/gdd/hud-system.md
+    value: 0.50
+    unit: HP ratio (0.0–1.0)
+    safe_range: "0.40 – 0.60"
+    notes: "Enemy HP ratio below which condition state becomes Bloodied. Used in
+      HP_RATIO formula condition mapping. Referenced by Enemy System and HUD System."
+    added: "2026-04-22"
+    revised: ""
+
+  - name: HP_THRESHOLD_NEAR_BREAKING
+    status: active
+    source: design/gdd/character-stats-and-growth.md
+    referenced_by:
+      - design/gdd/character-stats-and-growth.md
+      - design/gdd/enemy-system.md
+      - design/gdd/hud-system.md
+    value: 0.25
+    unit: HP ratio (0.0–1.0)
+    safe_range: "0.15 – 0.35"
+    notes: "Enemy HP ratio below which condition state becomes Near-Breaking. Used
+      in HP_RATIO formula condition mapping. Referenced by Enemy System and HUD System."
+    added: "2026-04-22"
+    revised: ""
+
+  - name: CC_GAIN_PERFECT_ATTACK
+    status: active
+    source: design/gdd/timing-combat-system.md
+    referenced_by:
+      - design/gdd/timing-combat-system.md
+    value: 2
+    unit: CC units (integer)
+    safe_range: "1 – 3"
+    notes: "CC gained when a party member's attack timing window returns PERFECT grade.
+      Interacts with MAX_CHARGE (higher CC gain rate has same effect as lower MAX_CHARGE).
+      Tune together with CC_GAIN_HIT_ATTACK and MAX_CHARGE."
+    added: "2026-04-28"
+    revised: ""
+
+  - name: CC_GAIN_HIT_ATTACK
+    status: active
+    source: design/gdd/timing-combat-system.md
+    referenced_by:
+      - design/gdd/timing-combat-system.md
+    value: 1
+    unit: CC units (integer)
+    safe_range: "0 – 2"
+    notes: "CC gained when a party member's attack timing window returns HIT grade.
+      If set equal to CC_GAIN_PERFECT_ATTACK, the grade distinction loses CC value."
+    added: "2026-04-28"
+    revised: ""
+
+  - name: CC_GAIN_PERFECT_BLOCK
+    status: active
+    source: design/gdd/timing-combat-system.md
+    referenced_by:
+      - design/gdd/timing-combat-system.md
+    value: 1
+    unit: CC units (integer)
+    safe_range: "0 – 2"
+    notes: "CC gained when a block timing window returns PERFECT grade. Also triggers
+      the free PERFECT block counter. Raising this risks making block the primary
+      CC farming strategy over attack."
+    added: "2026-04-28"
+    revised: ""
+
+  - name: BLOCK_MITIGATION_FACTOR
+    status: active
+    source: design/gdd/timing-combat-system.md
+    referenced_by:
+      - design/gdd/timing-combat-system.md
+    value: 0.5
+    unit: multiplier (applied to full_damage on HIT block)
+    safe_range: "0.3 – 0.7"
+    notes: "Damage multiplier applied to enemy full_damage when party block grade = HIT.
+      Used in block_mitigation_hit formula. At 0.3: HIT block absorbs 70% — PERFECT
+      advantage shrinks. At 0.7: HIT block absorbs only 30% — strong incentive to PERFECT,
+      but HIT grade may feel insufficient reward."
+    added: "2026-04-28"
+    revised: ""
 
 # Example:
 #

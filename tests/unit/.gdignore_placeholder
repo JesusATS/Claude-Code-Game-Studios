@@ -1,0 +1,9 @@
+# Unit tests go here — one subdirectory per system
+# Examples:
+#   tests/unit/foundation/resource_registry_test.gd
+#   tests/unit/core/status_effects_test.gd
+#   tests/unit/core/ability_system_test.gd
+#   tests/unit/core/input_timing_detector_test.gd
+#
+# Required before story is marked Done for all Logic-type stories.
+# See tests/README.md for naming conventions.

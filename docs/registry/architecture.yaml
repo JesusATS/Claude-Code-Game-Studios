@@ -43,7 +43,107 @@ last_updated: ""
 # interface: how other systems access this state (read-only property, method call,
 #   signal, shared resource, etc.) — this is the contract other ADRs depend on.
 
-state_ownership: []
+state_ownership:
+  - state: game_data_registry
+    status: active
+    owner_system: ResourceRegistry
+    adr: docs/architecture/adr-0001-data-driven-resource-registry.md
+    interface: "ResourceRegistry.get_character(id), get_ability(id), get_status_effect(id), get_enemy(id) — read-only; get_*_copy(id) for mutable encounter copies"
+    write_access: ResourceRegistry-only   # loaded once at startup, read-only at runtime
+    referenced_by:
+      - docs/architecture/adr-0001-data-driven-resource-registry.md
+    added: 2026-05-04
+    revised: ""
+
+  - state: autoload_singleton_set
+    status: active
+    owner_system: ProjectSettings (Autoload tab)
+    adr: docs/architecture/adr-0002-autoload-singleton-strategy.md
+    interface: "6 confirmed Autoloads in load order: StoryState(1), ResourceRegistry(2), DialogueManager(3), SceneManager(4), CombatEventBus(5), PartyCompositionManager(6). ADR-0010 added position 6."
+    write_access: ADR-0002 only — any addition to the Autoload list must pass 3-rule criterion and update ADR-0002
+    referenced_by:
+      - docs/architecture/adr-0002-autoload-singleton-strategy.md
+      - docs/architecture/adr-0004-combat-event-signal-bus.md
+      - docs/architecture/adr-0010-party-slot-model.md
+
+  - state: combat_event_routing
+    status: active
+    owner_system: CombatEventBus
+    adr: docs/architecture/adr-0004-combat-event-signal-bus.md
+    interface: "CombatEventBus Autoload — 13 signals (encounter_started, encounter_ended, turn_started, turn_ended, damage_dealt, combatant_incapacitated, hp_danger_zone_entered, enemy_condition_changed, hp_changed, status_effect_applied, status_effect_expired, status_effect_tick, ability_list_changed)"
+    write_access: "TCS and SE feed events into bus via relay methods; BattleSceneRoot wires the connections; no system emits directly onto the bus"
+    referenced_by:
+      - docs/architecture/adr-0004-combat-event-signal-bus.md
+      - docs/architecture/adr-0006-combat-state-machine.md
+    added: 2026-05-04
+    revised: ""
+
+  - state: enemy_hp_during_combat
+    status: active
+    owner_system: TimingCombatSystem
+    adr: docs/architecture/adr-0006-combat-state-machine.md
+    interface: "TCS._enemy_hp: Dictionary[int, int] — instance_id → current_hp. Read-only for all other systems. Populated at ENCOUNTER_START from EnemyData.hp_max. Discarded at ENCOUNTER_END."
+    write_access: "TCS-only. EnemySystem and StatusEffects read HP via encounter_state snapshot constructed by TCS."
+    referenced_by:
+      - docs/architecture/adr-0006-combat-state-machine.md
+    added: 2026-05-04
+    revised: ""
+
+  - state: party_slot_registry
+    status: active
+    owner_system: PartyCompositionManager
+    adr: docs/architecture/adr-0010-party-slot-model.md
+    interface: "PCM.get_active_combatants() -> Array[CharacterData] (shallow copy, non-null slots only). PCM.get_slot(slot_index: int) -> CharacterData (1-indexed). PCM.is_initialized() -> bool (guard before any query). PCM.get_party_snapshot() -> Dictionary (String keys '1'-'4')."
+    write_access: "PCM-only. Slots mutated only via initialize(), register_guest(), deregister_guest(). All callers receive copies or read-only references."
+    referenced_by:
+      - docs/architecture/adr-0010-party-slot-model.md
+      - docs/architecture/adr-0006-combat-state-machine.md
+    added: 2026-05-04
+    revised: ""
+
+  - state: inherited_ability_unlock_records
+    status: active
+    owner_system: AbilitySystem
+    adr: docs/architecture/adr-0016-inherited-ability-guest-departure.md
+    interface: "AbilitySystem.unlock_inherited_ability(receiving_char_id, ability_id, source_guest_id, chapter) — write path. AbilitySystem.get_combatant_abilities(combatant_id) — read path (includes unlocked inherited abilities). serialize_unlock_records() / deserialize_unlock_records() — Save System integration."
+    write_access: "AbilitySystem-only via unlock_inherited_ability(). Guest Character System calls this method — never writes _unlock_records directly."
+    referenced_by:
+      - docs/architecture/adr-0016-inherited-ability-guest-departure.md
+    added: 2026-05-04
+    revised: ""
+
+  - state: enemy_condition_state_cache
+    status: active
+    owner_system: TimingCombatSystem
+    adr: docs/architecture/adr-0015-enemy-condition-evaluation.md
+    interface: "TCS._enemy_condition_states: Dictionary[int, StringName] — internal cache only. Consumers receive state changes via enemy_condition_changed signal (CombatEventBus). No external get_condition_state() method is exposed."
+    write_access: "TCS-only. Written by _check_condition_transition() called after every HP mutation."
+    referenced_by:
+      - docs/architecture/adr-0015-enemy-condition-evaluation.md
+    added: 2026-05-04
+    revised: ""
+
+  - state: enemy_scan_unlock_flags
+    status: active
+    owner_system: TimingCombatSystem
+    adr: docs/architecture/adr-0015-enemy-condition-evaluation.md
+    interface: "TCS.get_exact_hp(instance_id: int) -> int — public method. Returns -1 with push_error() if scan not yet resolved. Scan unlocked by AS.scan_resolved signal relayed via BattleSceneRoot."
+    write_access: "TCS-only via _on_scan_resolved(). AS emits the trigger; TCS sets the flag."
+    referenced_by:
+      - docs/architecture/adr-0015-enemy-condition-evaluation.md
+    added: 2026-05-04
+    revised: ""
+
+  - state: combatant_instance_id_namespace
+    status: active
+    owner_system: TimingCombatSystem
+    adr: docs/architecture/adr-0006-combat-state-machine.md
+    interface: "int instance_id. Party: slot index 1-4 (1-based, matching PCM). Enemies: 101 + encounter_slot (1-based). BattleSceneRoot relay converts int → str(id) StringName at CombatEventBus boundary."
+    write_access: "TCS assigns IDs at ENCOUNTER_START. IDs are stable for the encounter lifetime and not reused if a combatant is INCAPACITATED."
+    referenced_by:
+      - docs/architecture/adr-0006-combat-state-machine.md
+    added: 2026-05-04
+    revised: ""
 
 # Example:
 #
@@ -71,7 +171,65 @@ state_ownership: []
 #
 # pattern options: signal | direct_call | event_bus | shared_resource | rpc | none
 
-interfaces: []
+interfaces:
+  - contract: game_data_lookup
+    status: active
+    pattern: direct_call
+    producer: ResourceRegistry
+    consumers:
+      - TimingCombatSystem    # reads AbilityData.timing_window_frames at turn start
+      - AbilitySystem         # reads AbilityData at ability resolution
+      - EnemyRegistry         # reads EnemyData at enemy spawn
+      - PartyCompositionManager  # reads CharacterData at party load
+      - StatusEffects         # reads StatusEffectData at effect application
+      - AudioSystem           # reads sfx_id fields for sound events
+      - HUDSystem             # reads CharacterData for stat display
+    adr: docs/architecture/adr-0001-data-driven-resource-registry.md
+    signal_signature: "get_*(id: StringName) -> [Type]Data  |  get_*_copy(id: StringName) -> [Type]Data"
+    referenced_by:
+      - docs/architecture/adr-0001-data-driven-resource-registry.md
+    added: 2026-05-04
+    revised: ""
+
+  - contract: autoload_reference_injection
+    status: active
+    pattern: direct_call
+    producer: SceneRoot (composition root nodes)
+    consumers:
+      - all scene-local systems that need Autoload services
+    adr: docs/architecture/adr-0002-autoload-singleton-strategy.md
+    signal_signature: "initialize(registry: ResourceRegistry, story_state: StoryState) — composition root calls get_node('/root/X') once and injects into children"
+    referenced_by:
+      - docs/architecture/adr-0002-autoload-singleton-strategy.md
+    added: 2026-05-04
+    revised: ""
+
+  - contract: itd_window_hud_gating
+    status: active
+    pattern: signal
+    producer: InputTimingDetector
+    consumers:
+      - BattleSceneRoot (composition root)  # connects to HUD disable/enable
+    adr: docs/architecture/adr-0003-input-routing-dual-focus.md
+    signal_signature: "window_opened(mode: StringName) → _hud_root.set_process_input(false); window_closed(grade: StringName) → _hud_root.set_process_input(true)"
+    referenced_by:
+      - docs/architecture/adr-0003-input-routing-dual-focus.md
+    added: 2026-05-04
+    revised: ""
+
+  - contract: combat_event_bus_relay
+    status: active
+    pattern: event_bus
+    producer: "TimingCombatSystem (TCS), StatusEffects (SE) — via relay methods"
+    consumers:
+      - HUDSystem    # subscribes to bus at _ready(); persistent
+      - AudioSystem  # subscribes to bus at _ready(); persistent
+    adr: docs/architecture/adr-0004-combat-event-signal-bus.md
+    signal_signature: "CombatEventBus Autoload — relay pattern: BattleSceneRoot connects tcs.signal → bus.relay_*(). HUD/Audio subscribe bus.signal → handler."
+    referenced_by:
+      - docs/architecture/adr-0004-combat-event-signal-bus.md
+    added: 2026-05-04
+    revised: ""
 
 # Example:
 #
@@ -131,7 +289,208 @@ performance_budgets: []
 # Register an API decision when the choice is non-obvious and other ADRs might
 # make a different choice for the same purpose without knowing this was decided.
 
-api_decisions: []
+api_decisions:
+  - purpose: game_data_schema_format
+    status: active
+    api: "Resource subclass with @export fields in standalone .gd file with class_name"
+    not: "GDScript Dictionary, JSON/FileAccess, inner class Resource"
+    adr: docs/architecture/adr-0001-data-driven-resource-registry.md
+    reason: "Inspector authoring, typed arrays, .tres deserialization, and static analysis all require standalone class_name declarations on Resource subclasses"
+    referenced_by:
+      - docs/architecture/adr-0001-data-driven-resource-registry.md
+    added: 2026-05-04
+    revised: ""
+
+  - purpose: autoload_qualification
+    status: active
+    api: "3-rule criterion: (1) state survives scene changes, (2) 3+ unrelated consumers, (3) no scene-specific node dependency"
+    not: "ad-hoc Autoload promotion; Autoloads for combat-scope or encounter-scope systems"
+    adr: docs/architecture/adr-0002-autoload-singleton-strategy.md
+    reason: "Prevents global singleton sprawl; enforces testability by keeping the Autoload surface minimal and explicit"
+    referenced_by:
+      - docs/architecture/adr-0002-autoload-singleton-strategy.md
+    added: 2026-05-04
+    revised: ""
+
+  - purpose: timing_confirm_action_mapping
+    status: active
+    api: "timing_confirm is a standalone InputMap action. Keys: [Space]. Joypad: [JOY_BUTTON_A]. NOT aliased to ui_accept or any ui_* action."
+    not: "timing_confirm bound to ui_accept; any sharing of logical action identity between timing_confirm and ui_* actions"
+    adr: docs/architecture/adr-0003-input-routing-dual-focus.md
+    reason: "Prevents HUD Controls from consuming timing_confirm events under ui_accept during combat timing windows"
+    referenced_by:
+      - docs/architecture/adr-0003-input-routing-dual-focus.md
+    added: 2026-05-04
+    revised: ""
+
+  - purpose: refcounted_class_placement
+    status: active
+    api: "All class_name X extends RefCounted declarations must be in standalone .gd files (not inner classes). File named after class in snake_case. Co-located in owning system directory."
+    not: "inner class RefCounted with class_name; anonymous RefCounted subclasses in typed arrays"
+    adr: docs/architecture/adr-0005-refcounted-class-naming-typed-collections.md
+    reason: "Inner-class class_name does not enable typed array type inference in Godot 4.x. Mirrors ADR-0001 rule for Resource subclasses."
+    referenced_by:
+      - docs/architecture/adr-0005-refcounted-class-naming-typed-collections.md
+    added: 2026-05-04
+    revised: ""
+
+  - purpose: typed_collections_in_public_api
+    status: active
+    api: "All public method signatures and class properties must use typed collections: Array[T] and Dictionary[K, V]. No raw Array or Dictionary in public interfaces."
+    not: "untyped Array or Dictionary in any public method signature or class property"
+    adr: docs/architecture/adr-0005-refcounted-class-naming-typed-collections.md
+    reason: "Static analysis and autocomplete require typed collections. Dictionary[K,V] available since Godot 4.4, confirmed in 4.6."
+    referenced_by:
+      - docs/architecture/adr-0005-refcounted-class-naming-typed-collections.md
+    added: 2026-05-04
+    revised: ""
+
+  - purpose: combat_fsm_implementation_pattern
+    status: active
+    api: "Signal-driven FSM using CONNECT_ONE_SHOT for external input waits (timing window, block window). No coroutine-based await chains for TCS state transitions."
+    not: "await-based coroutine chain for TCS state machine; storing coroutine references to cancel mid-await"
+    adr: docs/architecture/adr-0006-combat-state-machine.md
+    reason: "CONNECT_ONE_SHOT enables force_close_window() to interrupt any pending window without coroutine lifecycle management. Signal-driven state allows per-frame GUT assertions on _state."
+    referenced_by:
+      - docs/architecture/adr-0006-combat-state-machine.md
+    added: 2026-05-04
+    revised: ""
+
+  - purpose: combatant_id_type_at_bus_boundary
+    status: active
+    api: "TCS signals use int combatant_id. BattleSceneRoot relay converts int → StringName via str(id) before calling CombatEventBus relay methods. CombatEventBus signals use StringName (ADR-0004)."
+    not: "TCS emitting StringName combatant_id directly; storing StringName ids internally in TCS or SE"
+    adr: docs/architecture/adr-0006-combat-state-machine.md
+    reason: "int is simpler for arithmetic and dictionary keys inside TCS. StringName on the bus matches ADR-0004's signal contracts. The relay boundary is the single conversion point."
+    referenced_by:
+      - docs/architecture/adr-0006-combat-state-machine.md
+      - docs/architecture/adr-0004-combat-event-signal-bus.md
+    added: 2026-05-04
+    revised: ""
+
+  - purpose: ability_system_id_type
+    status: active
+    api: "AbilitySystem public API uses StringName character_id (CharacterData.id, e.g. &'clawd'). TCS maintains _instance_to_char_id: Dictionary[int, StringName] at ENCOUNTER_START to bridge int instance_ids to AS calls."
+    not: "AbilitySystem using int instance_id; TCS passing raw int to AS methods"
+    adr: docs/architecture/adr-0009-status-effect-application-contract.md
+    reason: "AS persistent state (InheritedAbilityUnlockRecord, combo_states) is keyed by permanent character identity, not encounter-scope instance_id. StringName character_id is consistent across encounters."
+    referenced_by:
+      - docs/architecture/adr-0009-status-effect-application-contract.md
+    added: 2026-05-04
+    revised: ""
+
+  - purpose: status_effects_id_type
+    status: active
+    api: "StatusEffects public API uses int instance_id (same convention as TCS internals, ADR-0006). SE signals emit int; BattleSceneRoot relay converts to StringName for CombatEventBus."
+    not: "StatusEffects using StringName combatant_id internally; SE signals emitting StringName directly"
+    adr: docs/architecture/adr-0009-status-effect-application-contract.md
+    reason: "SE is purely encounter-scoped. int instance_id matches TCS calling convention — no per-call conversion needed for high-frequency get_modifier() calls."
+    referenced_by:
+      - docs/architecture/adr-0009-status-effect-application-contract.md
+    added: 2026-05-04
+    revised: ""
+
+  - purpose: ability_resolved_connection_mode
+    status: active
+    api: "SE connects to AS.ability_resolved with CONNECT_DEFAULT (synchronous). SE handler fires inside resolve_ability() before it returns. SE modifiers are visible to TCS stat reads in the same resolution frame."
+    not: "CONNECT_DEFERRED for ability_resolved; any pattern that defers SE modifier application to the next frame"
+    adr: docs/architecture/adr-0009-status-effect-application-contract.md
+    reason: "GDD same-frame visibility guarantee: effect modifiers applied by ability_resolved must be visible to get_modifier() within the same resolve_ability() call. Deferred connection silently breaks authored ability behavior."
+    referenced_by:
+      - docs/architecture/adr-0009-status-effect-application-contract.md
+    added: 2026-05-04
+    revised: ""
+
+  - purpose: inherited_ability_unlock_write_path
+    status: active
+    api: "AbilitySystem.unlock_inherited_ability(char_id, ability_id, guest_id, chapter). Idempotent. Validates ability_id and category='INHERITED' before writing. ability_list_changed emission buffered via _encounter_active flag — fires immediately between encounters, deferred to on_encounter_ended() during combat."
+    not: "Guest Character System writing _unlock_records directly; ability_list_changed firing mid-combat; unlock records stored in GCS"
+    adr: docs/architecture/adr-0016-inherited-ability-guest-departure.md
+    reason: "AbilitySystem is the sole owner of unlock state (GDD explicit). Mid-combat emission would require HUD to rebuild ability menus during a live turn — undefined under ADR-0014. Idempotency prevents double-registration on scene reloads."
+    referenced_by:
+      - docs/architecture/adr-0016-inherited-ability-guest-departure.md
+    added: 2026-05-04
+    revised: ""
+
+  - purpose: scan_resolved_signal_routing
+    status: active
+    api: "AS emits scan_resolved(target_instance_id: int). BattleSceneRoot wires it to: (1) tcs._on_scan_resolved() [direct] and (2) bus.relay_scan_resolved() [CombatEventBus, 14th signal]. int→StringName conversion at bus boundary per ADR-0006 convention."
+    not: "HUD subscribing directly to AS.scan_resolved; TCS querying EnemyData for scan state; scan unlock flag stored outside TCS"
+    adr: docs/architecture/adr-0015-enemy-condition-evaluation.md
+    reason: "Consistent with ADR-0004's relay pattern. TCS must set _scan_unlocked before HUD reads get_exact_hp() — direct wiring guarantees ordering; bus relay delivers to HUD."
+    referenced_by:
+      - docs/architecture/adr-0015-enemy-condition-evaluation.md
+      - docs/architecture/adr-0004-combat-event-signal-bus.md
+    added: 2026-05-04
+    revised: ""
+
+  - purpose: multi_hit_fsm_pattern
+    status: active
+    api: "Multi-hit abilities use _pending_hits_remaining counter on TCS. BLOCK_RESOLVE checks counter: if > 0 → transition to BLOCK_WINDOW (next hit); else → TURN_END. Each BLOCK_WINDOW opens fresh ITD timing window. No coroutines."
+    not: "Coroutine loop in ENEMY_ACTION iterating through hits with await; polling _process() to chain windows; storing hit results mid-sequence outside TCS"
+    adr: docs/architecture/adr-0015-enemy-condition-evaluation.md
+    reason: "Extends signal-driven FSM (ADR-0006) without introducing coroutines. force_close_window() works identically for single and multi-hit paths."
+    referenced_by:
+      - docs/architecture/adr-0015-enemy-condition-evaluation.md
+    added: 2026-05-04
+    revised: ""
+
+  - purpose: hud_canvaslayer_assignment
+    status: active
+    api: "Layer 10: main HUD (turn strip, HP bars, CC bar, enemy panels, timing bar, action menu). Layer 11: grade flash overlay. Layer 12: encounter result text. Layers ≥ 20: non-HUD overlays (pause, dialogue, scene transitions)."
+    not: "HUD elements on layers outside 10–12; non-HUD overlays on layers 10–19"
+    adr: docs/architecture/adr-0014-hud-canvaslayer-structure.md
+    reason: "Fixed layer assignments prevent z-ordering conflicts between grade flash and HUD elements and between HUD overlays and scene transitions."
+    referenced_by:
+      - docs/architecture/adr-0014-hud-canvaslayer-structure.md
+    added: 2026-05-04
+    revised: ""
+
+  - purpose: timing_bar_animation_model
+    status: active
+    api: "TimingBar._process() accumulates delta into _elapsed_seconds. Cursor width = BAR_PIXEL_WIDTH * (1 - elapsed/duration). PERFECT flash uses 2× await get_tree().process_frame coroutine. Window frames clamped to minimum 2 with push_error()."
+    not: "Tick-driven animation via window_frame_tick signal; Timer nodes for PERFECT flash delay; polling _process() frame counter for PERFECT flash"
+    adr: docs/architecture/adr-0014-hud-canvaslayer-structure.md
+    reason: "Real-time delta ensures smooth animation at minimum window sizes (W=2). Coroutine-based PERFECT flash is explicitly specified by GDD VA-2.4 — frame boundary alignment guaranteed."
+    referenced_by:
+      - docs/architecture/adr-0014-hud-canvaslayer-structure.md
+    added: 2026-05-04
+    revised: ""
+
+  - purpose: pcm_autoload_position
+    status: active
+    api: "PartyCompositionManager is Autoload position 6 (amends ADR-0002). Accessed via injection — composition roots call get_node('/root/PartyCompositionManager') and inject the reference; leaf systems never reference it directly (per forbidden_pattern: direct_autoload_access_in_leaf_systems)."
+    not: "PCM as a scene-local node; PCM accessed directly by TCS/AS/SE without injection"
+    adr: docs/architecture/adr-0010-party-slot-model.md
+    reason: "PCM qualifies under 3-rule criterion: party state survives scene changes; 5+ unrelated consumers (TCS, HUD, AudioSystem, StoryState, SaveSystem); no scene-specific node dependency."
+    referenced_by:
+      - docs/architecture/adr-0010-party-slot-model.md
+      - docs/architecture/adr-0002-autoload-singleton-strategy.md
+    added: 2026-05-04
+    revised: ""
+
+  - purpose: max_party_size_constant
+    status: active
+    api: "PartyCompositionManager.MAX_PARTY_SIZE: int = 4 is the single source of truth for the party size limit. All consumers reference this constant — never hardcode literal 4."
+    not: "Hardcoded literal 4 in any file other than the PCM constant declaration itself"
+    adr: docs/architecture/adr-0010-party-slot-model.md
+    reason: "Single constant prevents silent divergence if party size changes (e.g., expansion to 5-member party). MAX_PARTY_SIZE on the class is accessible to all consumers without importing a separate constants file."
+    referenced_by:
+      - docs/architecture/adr-0010-party-slot-model.md
+    added: 2026-05-04
+    revised: ""
+
+  - purpose: effective_flux_floor_enforcement
+    status: active
+    api: "CharacterStatsUtil.effective_flux(base, inheritance_sum, status_modifier_sum) -> int applies EFFECTIVE_FLUX_FLOOR=8 as the minimum clamp. TCS calls this method for FLUX only; all other stats use effective_stat() with floor=1."
+    not: "Applying EFFECTIVE_FLUX_FLOOR in ITD, in TCS ad-hoc, or duplicated across multiple call sites"
+    adr: docs/architecture/adr-0009-status-effect-application-contract.md
+    reason: "Single enforcement site in CharacterStatsUtil co-locates the FLUX floor rule with the FLUX-to-frames conversion path. No drift risk from dual enforcement."
+    referenced_by:
+      - docs/architecture/adr-0009-status-effect-application-contract.md
+      - docs/architecture/adr-0007-effective-stat-computation.md
+    added: 2026-05-04
+    revised: ""
 
 # Example:
 #
@@ -157,7 +516,104 @@ api_decisions: []
 # Register a pattern when an ADR explicitly bans it AND other ADRs might
 # unknowingly use it (i.e., it's a tempting but wrong approach for this project).
 
-forbidden_patterns: []
+forbidden_patterns:
+  - pattern: hardcoded_game_data
+    status: active
+    description: "Game data (character stats, ability parameters, enemy profiles, status effect values) must never be defined as GDScript constants, dictionaries, or inline literals in game code."
+    why: "Hardcoded data violates coding-standards.md ('Gameplay values must be data-driven'), prevents Inspector authoring, and requires code edits for balance tuning."
+    adr: docs/architecture/adr-0001-data-driven-resource-registry.md
+    added: 2026-05-04
+
+  - pattern: json_file_access_for_structured_data
+    status: active
+    description: "Structured game data (schemas with typed fields) must not be stored as JSON files and loaded via FileAccess."
+    why: "JSON/FileAccess provides no Inspector authoring, no typed arrays, requires manual type coercion, and adds FileAccess.store_* bool-return error-check boilerplate (Godot 4.4+). Resource subclasses cover all required use cases without these costs."
+    adr: docs/architecture/adr-0001-data-driven-resource-registry.md
+    added: 2026-05-04
+
+  - pattern: direct_autoload_access_in_leaf_systems
+    status: active
+    description: "Game code outside designated composition root files must not call get_node('/root/AutoloadName') or reference Autoload global names directly."
+    why: "Direct Autoload access in leaf systems (AbilitySystem, StatusEffects, TCS, etc.) makes them untestable in isolation — unit tests cannot inject mocks. Only composition roots (scene root nodes) are permitted to retrieve Autoload references and inject them downward."
+    adr: docs/architecture/adr-0002-autoload-singleton-strategy.md
+    added: 2026-05-04
+
+  - pattern: timing_confirm_aliased_to_ui_accept
+    status: active
+    description: "timing_confirm must not be set as an alias or duplicate of ui_accept in InputMap. They may share the same physical key/button but must be separate logical actions."
+    why: "If timing_confirm is bound to ui_accept, any focused Control that handles ui_accept will consume the timing event before ITD can process it, causing missed timing grades."
+    adr: docs/architecture/adr-0003-input-routing-dual-focus.md
+    added: 2026-05-04
+
+  - pattern: hud_input_active_during_timing_window
+    status: active
+    description: "HUD Control subtree must have set_process_input(false) active for the duration of every ITD timing window. BattleSceneRoot composition root is responsible for this wiring."
+    why: "Any HUD Control with keyboard focus during a timing window could consume the timing_confirm event, silently dropping a player's timed input. Defense in depth beyond action separation."
+    adr: docs/architecture/adr-0003-input-routing-dual-focus.md
+    added: 2026-05-04
+
+  - pattern: persistent_system_direct_battle_scene_subscription
+    status: active
+    description: "Persistent systems (HUDSystem, AudioSystem) must NOT connect directly to signals on TCS, StatusEffects, or any other battle-scoped scene node."
+    why: "Battle-scoped nodes are freed at battle end. A persistent system holding a direct connection creates a dangling reference or requires explicit disconnect code every battle. CombatEventBus (ADR-0004) solves this cleanly — persistent systems subscribe to the bus once."
+    adr: docs/architecture/adr-0004-combat-event-signal-bus.md
+    added: 2026-05-04
+
+  - pattern: inner_class_refcounted_with_class_name
+    status: active
+    description: "class_name X extends RefCounted must not be declared on an inner class (a class defined inside another .gd file). Only standalone .gd files may carry class_name declarations for RefCounted subclasses."
+    why: "Inner-class class_name declarations do not enable typed array inference (Array[InnerClass] fails static analysis in Godot 4.x). All typed collection support requires standalone file class_name."
+    adr: docs/architecture/adr-0005-refcounted-class-naming-typed-collections.md
+    added: 2026-05-04
+
+  - pattern: enemy_hp_stored_outside_tcs
+    status: active
+    description: "Enemy current HP during combat must not be stored on EnemyData resources, in EnemySystem, or in any system other than TimingCombatSystem. TCS owns _enemy_hp: Dictionary[int, int] for the encounter lifetime."
+    why: "EnemyData is a read-only Resource (ADR-0001). EnemySystem is stateless. Placing mutable HP elsewhere creates dual-write risk or requires a separate HP query API. TCS-owned HP is cleared at ENCOUNTER_END with no lifecycle management burden on other systems."
+    adr: docs/architecture/adr-0006-combat-state-machine.md
+    added: 2026-05-04
+
+  - pattern: coroutine_based_tcs_state_machine
+    status: active
+    description: "TimingCombatSystem must not implement its state machine as a coroutine chain (no await itd.input_result or await hud.action_selected as the primary flow control mechanism)."
+    why: "Coroutine-based FSM cannot be interrupted by force_close_window() without fragile coroutine lifecycle management. Signal-driven FSM with CONNECT_ONE_SHOT resolves this cleanly and enables per-frame GUT state inspection."
+    adr: docs/architecture/adr-0006-combat-state-machine.md
+    added: 2026-05-04
+
+  - pattern: canvaslayer_direct_modulate
+    status: active
+    description: "No HUD element may be a direct child of a CanvasLayer node. Every CanvasLayer must have a Node2D as its sole direct child ('container'). All HUD elements are children of that Node2D. Tween targets for modulate are the Node2D containers — never the CanvasLayer nodes themselves."
+    why: "CanvasLayer extends Node (not CanvasItem) in Godot 4.x — it has no modulate property. Tweening a CanvasLayer's modulate silently fails (no error, no visual effect). The Node2D container pattern is the only way to give CanvasLayer children modulate-based warm/cool palette participation."
+    adr: docs/architecture/adr-0014-hud-canvaslayer-structure.md
+    added: 2026-05-04
+
+  - pattern: timing_bar_tick_driven_animation
+    status: active
+    description: "TimingBar cursor width must NOT be driven by ITD window_frame_tick signals. Width must be computed in _process() via elapsed real-time delta accumulation and Formula H1."
+    why: "At minimum window size W=2 (window_duration_seconds ≈ 0.033s), only 0–1 ITD ticks arrive before window close. Tick-driven animation at this scale produces a visually frozen bar. _process() at render rate (~60fps) provides 2 width samples even at W=2, ensuring smooth visual depletion."
+    adr: docs/architecture/adr-0014-hud-canvaslayer-structure.md
+    added: 2026-05-04
+
+  - pattern: pcm_not_initialized_query
+    status: active
+    description: "No method on PartyCompositionManager may return data before is_initialized() returns true. Any call that arrives before initialize() must push_error() and return a safe default (empty array, null, 0)."
+    why: "PCM is Autoload position 6 — it has no data until the game scene calls initialize(). Callers in other Autoloads (positions 1-5) or early _ready() calls may execute before initialization. The guard prevents silent null reads."
+    adr: docs/architecture/adr-0010-party-slot-model.md
+    added: 2026-05-04
+
+  - pattern: party_snapshot_int_keys
+    status: active
+    description: "get_party_snapshot() must return Dictionary with String keys '1'-'4', never int keys 1-4."
+    why: "JSON round-trips (save/load, telemetry) coerce Dictionary int keys to String automatically on serialize but not on deserialize — the deserialized dict has String keys regardless. Using String keys from the start prevents key-type mismatch bugs in save data."
+    adr: docs/architecture/adr-0010-party-slot-model.md
+    added: 2026-05-04
+
+  - pattern: deferred_ability_resolved_connection
+    status: active
+    description: "StatusEffects must not connect to AbilitySystem.ability_resolved with CONNECT_DEFERRED. The connection must use CONNECT_DEFAULT (synchronous)."
+    why: "CONNECT_DEFERRED defers SE handler to the next frame. TCS reads effective stats in the same frame as ability dispatch — a deferred connection causes TCS to read stale modifier values and compute incorrect damage for abilities that self-apply debuffs."
+    adr: docs/architecture/adr-0009-status-effect-application-contract.md
+    added: 2026-05-04
 
 # Example:
 #

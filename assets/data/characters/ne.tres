@@ -1,0 +1,15 @@
+[gd_resource type="CharacterData" load_steps=2 format=3 uid="uid://bh8y4n6o1z3q2"]
+
+[ext_resource type="Script" path="res://src/core/character_stats/character_data.gd" id="1_ne0001"]
+
+[resource]
+script = ExtResource("1_ne0001")
+id = &"char_ne"
+display_name = "Ne"
+base_hp = 80
+base_atk = 18
+base_def = 8
+base_spd = 20
+base_flux = 8
+perfect_hit_multiplier = 1.6
+base_abilities = []

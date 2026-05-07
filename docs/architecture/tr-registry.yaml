@@ -24,33 +24,429 @@
 #
 # STATUS VALUES: active | deprecated | superseded-by: TR-[system]-NNN
 
-version: 1
-last_updated: ""
+version: 2
+last_updated: "2026-05-04"
 
-requirements: []
+requirements:
 
-# --- EXAMPLE ENTRIES (remove when first real entries are added) ---
-#
-# - id: TR-combat-001
-#   system: combat
-#   gdd: design/gdd/combat-system.md
-#   requirement: "Player takes damage from enemies based on attack power minus defence"
-#   created: 2026-03-10
-#   revised: ""
-#   status: active
-#
-# - id: TR-combat-002
-#   system: combat
-#   gdd: design/gdd/combat-system.md
-#   requirement: "Combo window timing is 0.4 seconds between hits"
-#   created: 2026-03-10
-#   revised: "2026-04-01"
-#   status: active
-#
-# - id: TR-combat-003
-#   system: combat
-#   gdd: design/gdd/combat-system.md
-#   requirement: "Old damage formula using raw stats"
-#   created: 2026-03-10
-#   revised: ""
-#   status: superseded-by: TR-combat-001
+# --- Character Stats & Growth (CSG) ---
+
+- id: TR-CSG-001
+  system: character-stats-and-growth
+  gdd: design/gdd/character-stats-and-growth.md
+  requirement: "CharacterData Resource schema with typed stat fields (HP, ATK, DEF, SPD, FLUX, TEMPO)"
+  created: "2026-05-04"
+  revised: ""
+  status: active
+
+- id: TR-CSG-002
+  system: character-stats-and-growth
+  gdd: design/gdd/character-stats-and-growth.md
+  requirement: "effective_stat formula: max(1, min(99, base + NIO_sum + status_modifier_sum))"
+  created: "2026-05-04"
+  revised: ""
+  status: active
+
+- id: TR-CSG-003
+  system: character-stats-and-growth
+  gdd: design/gdd/character-stats-and-growth.md
+  requirement: "Formula 2a (TIMING_WINDOW_FRAMES from FLUX) and 2b (BLOCK_WINDOW_FRAMES from TEMPO)"
+  created: "2026-05-04"
+  revised: ""
+  status: active
+
+- id: TR-CSG-004
+  system: character-stats-and-growth
+  gdd: design/gdd/character-stats-and-growth.md
+  requirement: "WINDOW_SCALE_FACTOR (1.0 default, 0.6-1.6) global accessibility knob"
+  created: "2026-05-04"
+  revised: ""
+  status: active
+
+- id: TR-CSG-005
+  system: character-stats-and-growth
+  gdd: design/gdd/character-stats-and-growth.md
+  requirement: "NamedInheritanceObject Resource schema; apply_inheritance() idempotent append; compute_inheritance_magnitude() with FLUX_INHERITANCE_MIN=2 floor"
+  created: "2026-05-05"
+  revised: ""
+  status: active
+
+# --- Input & Timing Detection (ITD) ---
+
+- id: TR-ITD-001
+  system: input-and-timing-detection
+  gdd: design/gdd/input-and-timing-detection.md
+  requirement: "FSM: IDLE / ACTION_WINDOW / BLOCK_WINDOW / BLOCK_FORGIVENESS states"
+  created: "2026-05-04"
+  revised: ""
+  status: active
+
+- id: TR-ITD-002
+  system: input-and-timing-detection
+  gdd: design/gdd/input-and-timing-detection.md
+  requirement: "Frame-precise input via _input() + _physics_process() at 60fps"
+  created: "2026-05-04"
+  revised: ""
+  status: active
+
+- id: TR-ITD-003
+  system: input-and-timing-detection
+  gdd: design/gdd/input-and-timing-detection.md
+  requirement: "class_name InputTimingDetector required for typed references"
+  created: "2026-05-04"
+  revised: ""
+  status: active
+
+- id: TR-ITD-004
+  system: input-and-timing-detection
+  gdd: design/gdd/input-and-timing-detection.md
+  requirement: "Node placed above CanvasLayer OR all HUD Controls use mouse_filter=IGNORE -- Godot 4.6 dual-focus"
+  created: "2026-05-04"
+  revised: ""
+  status: active
+
+- id: TR-ITD-005
+  system: input-and-timing-detection
+  gdd: design/gdd/input-and-timing-detection.md
+  requirement: "force_close_window() public API -- must be called before pause/scene transition"
+  created: "2026-05-04"
+  revised: ""
+  status: active
+
+- id: TR-ITD-006
+  system: input-and-timing-detection
+  gdd: design/gdd/input-and-timing-detection.md
+  requirement: "inject_input() / advance_frame() test seam for GUT"
+  created: "2026-05-04"
+  revised: ""
+  status: active
+
+# --- Story State & Flag System (SSF) ---
+
+- id: TR-SSF-001
+  system: story-state-flag-system
+  gdd: design/gdd/story-state-flag-system.md
+  requirement: "StoryState Autoload singleton -- first in Project Settings"
+  created: "2026-05-04"
+  revised: ""
+  status: active
+
+- id: TR-SSF-002
+  system: story-state-flag-system
+  gdd: design/gdd/story-state-flag-system.md
+  requirement: "set_flag/check_flag/has_flag API + flag_set/flags_restored signals"
+  created: "2026-05-04"
+  revised: ""
+  status: active
+
+# --- Audio System (AUD) ---
+
+- id: TR-AUD-001
+  system: audio-system
+  gdd: design/gdd/audio-system.md
+  requirement: "5 pre-allocated AudioStreamPlayer nodes (MusicA/B, CombatLayer, ApexA/B)"
+  created: "2026-05-04"
+  revised: ""
+  status: active
+
+- id: TR-AUD-002
+  system: audio-system
+  gdd: design/gdd/audio-system.md
+  requirement: "2-tier SFX pool (PROTECTED/STANDARD), steal algorithm, pool size=12"
+  created: "2026-05-04"
+  revised: ""
+  status: active
+
+- id: TR-AUD-003
+  system: audio-system
+  gdd: design/gdd/audio-system.md
+  requirement: "play_sfx_delayed() via create_timer().timeout"
+  created: "2026-05-04"
+  revised: ""
+  status: active
+
+# --- Ability System (AS) ---
+
+- id: TR-AS-001
+  system: ability-system
+  gdd: design/gdd/ability-system.md
+  requirement: "AbilityData Resource registry -- data-driven, @export fields, read-only at runtime"
+  created: "2026-05-04"
+  revised: ""
+  status: active
+
+- id: TR-AS-002
+  system: ability-system
+  gdd: design/gdd/ability-system.md
+  requirement: "resolve_ability() single-target contract; loop at call site for multi-target"
+  created: "2026-05-04"
+  revised: ""
+  status: active
+
+- id: TR-AS-003
+  system: ability-system
+  gdd: design/gdd/ability-system.md
+  requirement: "ability_resolved(id, grade, target) signal -- trigger for Status Effects"
+  created: "2026-05-04"
+  revised: ""
+  status: active
+
+- id: TR-AS-004
+  system: ability-system
+  gdd: design/gdd/ability-system.md
+  requirement: "ComboState + InheritedAbilityUnlockRecord with class_name declarations"
+  created: "2026-05-04"
+  revised: ""
+  status: active
+
+- id: TR-AS-005
+  system: ability-system
+  gdd: design/gdd/ability-system.md
+  requirement: "get_combo_state() / reset_encounter_state() APIs"
+  created: "2026-05-04"
+  revised: ""
+  status: active
+
+- id: TR-AS-006
+  system: ability-system
+  gdd: design/gdd/ability-system.md
+  requirement: "Inherited ability persistence from guest departures (non-removable)"
+  created: "2026-05-04"
+  revised: ""
+  status: active
+
+# --- Status Effects (SE) ---
+
+- id: TR-SE-001
+  system: status-effects
+  gdd: design/gdd/status-effects.md
+  requirement: "StatusTracker + ActiveStatusEffect -- RefCounted, class_name required"
+  created: "2026-05-04"
+  revised: ""
+  status: active
+
+- id: TR-SE-002
+  system: status-effects
+  gdd: design/gdd/status-effects.md
+  requirement: "Dictionary[StringName, StatusTracker] typed dict (Godot 4.4+)"
+  created: "2026-05-04"
+  revised: ""
+  status: active
+
+- id: TR-SE-003
+  system: status-effects
+  gdd: design/gdd/status-effects.md
+  requirement: "get_modifier() / tick_turn() / initialize_encounter() public API"
+  created: "2026-05-04"
+  revised: ""
+  status: active
+
+- id: TR-SE-004
+  system: status-effects
+  gdd: design/gdd/status-effects.md
+  requirement: "CONNECT_DEFAULT (not CONNECT_DEFERRED) for ability_resolved subscription"
+  created: "2026-05-04"
+  revised: ""
+  status: active
+
+- id: TR-SE-005
+  system: status-effects
+  gdd: design/gdd/status-effects.md
+  requirement: "duplicate_deep() smoke test on Array[ActiveStatusEffect]"
+  created: "2026-05-04"
+  revised: ""
+  status: active
+
+- id: TR-SE-006
+  system: status-effects
+  gdd: design/gdd/status-effects.md
+  requirement: "EFFECTIVE_FLUX_FLOOR = 8 clamp on effective FLUX"
+  created: "2026-05-04"
+  revised: ""
+  status: active
+
+# --- Party Composition Manager (PCM) ---
+
+- id: TR-PCM-001
+  system: party-composition-manager
+  gdd: design/gdd/party-composition-manager.md
+  requirement: "4-slot fixed registry (slots 1-3 permanent, slot 4 guest)"
+  created: "2026-05-04"
+  revised: ""
+  status: active
+
+- id: TR-PCM-002
+  system: party-composition-manager
+  gdd: design/gdd/party-composition-manager.md
+  requirement: "get_active_combatants() returns shallow copy"
+  created: "2026-05-04"
+  revised: ""
+  status: active
+
+- id: TR-PCM-003
+  system: party-composition-manager
+  gdd: design/gdd/party-composition-manager.md
+  requirement: "is_initialized() guard before any query"
+  created: "2026-05-04"
+  revised: ""
+  status: active
+
+- id: TR-PCM-004
+  system: party-composition-manager
+  gdd: design/gdd/party-composition-manager.md
+  requirement: "get_party_snapshot() with String keys (not int) for JSON round-trip safety"
+  created: "2026-05-04"
+  revised: ""
+  status: active
+
+- id: TR-PCM-005
+  system: party-composition-manager
+  gdd: design/gdd/party-composition-manager.md
+  requirement: "MAX_PARTY_SIZE = 4 as project-level GDScript constant"
+  created: "2026-05-04"
+  revised: ""
+  status: active
+
+# --- Enemy System (ES) ---
+
+- id: TR-ES-001
+  system: enemy-system
+  gdd: design/gdd/enemy-system.md
+  requirement: "EnemyData Resource registry with typed ActionRule priority lists"
+  created: "2026-05-04"
+  revised: ""
+  status: active
+
+- id: TR-ES-002
+  system: enemy-system
+  gdd: design/gdd/enemy-system.md
+  requirement: "get_condition_state() derived lazily from HP ratio (never stored)"
+  created: "2026-05-04"
+  revised: ""
+  status: active
+
+- id: TR-ES-003
+  system: enemy-system
+  gdd: design/gdd/enemy-system.md
+  requirement: "enemy_condition_changed(instance_id, old_state, new_state, stinger_tier) signal"
+  created: "2026-05-04"
+  revised: ""
+  status: active
+
+- id: TR-ES-004
+  system: enemy-system
+  gdd: design/gdd/enemy-system.md
+  requirement: "get_exact_hp() locked behind scan_resolved signal"
+  created: "2026-05-04"
+  revised: ""
+  status: active
+
+- id: TR-ES-005
+  system: enemy-system
+  gdd: design/gdd/enemy-system.md
+  requirement: "Multi-hit abilities: sequential independent block windows per hit"
+  created: "2026-05-04"
+  revised: ""
+  status: active
+
+# --- Timing Combat System (TCS) ---
+
+- id: TR-TCS-001
+  system: timing-combat-system
+  gdd: design/gdd/timing-combat-system.md
+  requirement: "Full turn-based FSM: ENCOUNTER_START -> ROUND_START -> PLAYER_ACTION -> ENEMY_TURN -> ENCOUNTER_END"
+  created: "2026-05-04"
+  revised: ""
+  status: active
+
+- id: TR-TCS-002
+  system: timing-combat-system
+  gdd: design/gdd/timing-combat-system.md
+  requirement: "Orchestrates ITD, AS, ES, SE, PCM -- most-connected system"
+  created: "2026-05-04"
+  revised: ""
+  status: active
+
+- id: TR-TCS-003
+  system: timing-combat-system
+  gdd: design/gdd/timing-combat-system.md
+  requirement: "Audio calls: begin_combat_layer(), end_combat_layer(), begin_apex_layers(), end_apex_layers()"
+  created: "2026-05-04"
+  revised: ""
+  status: active
+
+- id: TR-TCS-004
+  system: timing-combat-system
+  gdd: design/gdd/timing-combat-system.md
+  requirement: "Combat signals relayed to persistent consumers via CombatEventBus"
+  created: "2026-05-04"
+  revised: ""
+  status: active
+
+- id: TR-TCS-005
+  system: timing-combat-system
+  gdd: design/gdd/timing-combat-system.md
+  requirement: "force_close_window() before pause/cutscene/scene transition"
+  created: "2026-05-04"
+  revised: ""
+  status: active
+
+- id: TR-TCS-006
+  system: timing-combat-system
+  gdd: design/gdd/timing-combat-system.md
+  requirement: "Enemy AI priority rule evaluation -- ConditionExpr top-down first-match"
+  created: "2026-05-04"
+  revised: ""
+  status: active
+
+- id: TR-TCS-007
+  system: timing-combat-system
+  gdd: design/gdd/timing-combat-system.md
+  requirement: "HP mutation direct to CharacterData references (not through PCM)"
+  created: "2026-05-04"
+  revised: ""
+  status: active
+
+# --- HUD System (HUD) ---
+
+- id: TR-HUD-001
+  system: hud-system
+  gdd: design/gdd/hud-system.md
+  requirement: "CanvasLayer 10/11/12 with Node2D containers for modulate tween"
+  created: "2026-05-04"
+  revised: ""
+  status: active
+
+- id: TR-HUD-002
+  system: hud-system
+  gdd: design/gdd/hud-system.md
+  requirement: "Ratio-driven timing bar (current_frame/total_frames) -- not tick-animation"
+  created: "2026-05-04"
+  revised: ""
+  status: active
+
+- id: TR-HUD-003
+  system: hud-system
+  gdd: design/gdd/hud-system.md
+  requirement: "Custom dual-input routing (gamepad selection index + mouse position independent)"
+  created: "2026-05-04"
+  revised: ""
+  status: active
+
+# --- Dialogue System (DLG) ---
+
+- id: TR-DLG-001
+  system: dialogue-system
+  gdd: design/gdd/dialogue-system.md
+  requirement: "DialogueManager Autoload singleton"
+  created: "2026-05-04"
+  revised: ""
+  status: active
+
+- id: TR-DLG-002
+  system: dialogue-system
+  gdd: design/gdd/dialogue-system.md
+  requirement: "DialogueGraph, DialogueNode, DialogueCondition, DialogueChoice, DialogueFlagWrite each in own .gd file with class_name"
+  created: "2026-05-04"
+  revised: ""
+  status: active

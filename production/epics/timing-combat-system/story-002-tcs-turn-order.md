@@ -1,7 +1,7 @@
 # Story 002: TCS Turn Order — SPD Sort, TPR Formula, Round Structure
 
 > **Epic**: Timing Combat System
-> **Status**: Ready
+> **Status**: Complete
 > **Layer**: Core
 > **Type**: Logic
 > **Manifest Version**: 2026-05-04
@@ -151,7 +151,26 @@ func _process_turn_start() -> void:
 **Story Type**: Logic
 **Required evidence**: `tests/unit/combat/tcs_turn_order_test.gd` — must exist and pass
 
-**Status**: [ ] Not yet created
+**Status**: [x] `tests/unit/combat/tcs_turn_order_test.gd` — 14 test functions (3 AC-1, 3 AC-2/boundary, 2 AC-3, 2 AC-4, 2 AC-5, 2 AC-6, 4 AC-7)
+
+---
+
+## Completion Notes
+
+**Completed**: 2026-05-05
+**Criteria**: 7/7 passing (AC-1 through AC-7)
+**Deviations**:
+- ADVISORY: Test framework is GdUnit4 (`extends GdUnitTestSuite`), not GUT — project-wide deviation.
+- ADVISORY: `tcs_fsm_core_test.gd` updated — StubStatusEffects extended with `check_turn_skip()`
+  and `get_modifier()`, `_run_full_encounter_to_idle()` updated for round recycling, AC-37
+  assertions corrected from IDLE → PLAYER_ACTION (round no longer terminates after one turn).
+- ADVISORY: `DEFAULT_ACTION_WINDOW_FRAMES` const kept for Story 001 test compatibility;
+  `_compute_action_window_frames()` now uses CharacterStatsUtil.timing_window_frames(flux).
+**Test Evidence**: Logic — `tests/unit/combat/tcs_turn_order_test.gd` (14 tests)
+**Code Review**: Complete — APPROVED WITH SUGGESTIONS (2026-05-05)
+  - No architectural violations. All 7 ACs verified.
+  - Tech debt logged: TD-001 (infinite-stun recursion, must fix before Story 005)
+  - Suggestions: `_mode` param rename, `maxi()` consistency, stub node cleanup in tests
 
 ---
 
