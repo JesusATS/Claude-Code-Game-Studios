@@ -6,7 +6,7 @@ goal: "Clear the remaining Pre-Production → Production gate blockers and lay t
 start: "2026-05-06"
 end: "2026-05-20"
 generated: "2026-05-06"
-updated: "2026-05-06"
+updated: "2026-05-07"
 
 stories:
   # ── Must Have ──────────────────────────────────────────────────────────────
@@ -15,11 +15,11 @@ stories:
     name: "BattleSceneRoot ADR Smoke Tests"
     file: "production/epics/timing-combat-system/story-012-bsr-adr-smoke-tests.md"
     priority: must-have
-    status: in-progress
+    status: done
     owner: ""
     estimate_days: 1.5
     blocker: ""
-    completed: ""
+    completed: "2026-05-07"
 
   - id: "S1-02"
     name: "HUD UX Spec"

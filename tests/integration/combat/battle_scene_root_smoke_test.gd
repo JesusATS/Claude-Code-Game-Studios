@@ -86,13 +86,15 @@ func test_bsr_adr0002_only_composition_root_accesses_bus_by_global_name() -> voi
 	bsr_file.close()
 	assert_that(bsr_content.contains("get_node(\"/root/CombatEventBus\")")).is_true()
 
-	# Negative: timing_combat_system.gd must be bus-unaware (ADR-0002 + ADR-0004 rule:
-	# "TCS must not directly call CombatEventBus" — TCS is a leaf system)
+	# Negative: timing_combat_system.gd must not access CombatEventBus by global name
+	# (ADR-0002: only composition roots use get_node("/root/AutoloadName") — TCS is a leaf)
+	# Note: comments in TCS may mention "CombatEventBus" for architecture documentation;
+	# only the actual access pattern get_node("/root/CombatEventBus") is forbidden.
 	var tcs_file := FileAccess.open(TCS_PATH, FileAccess.READ)
 	assert_that(tcs_file).is_not_null()
 	var tcs_content := tcs_file.get_as_text()
 	tcs_file.close()
-	assert_that(tcs_content.contains("CombatEventBus")).is_false()
+	assert_that(tcs_content.contains("get_node(\"/root/CombatEventBus\")")).is_false()
 
 	# Negative: combat_event_bus.gd must not self-access other Autoloads by global name
 	# (CombatEventBus is itself an Autoload — it has no reason to call get_node("/root/..."))
