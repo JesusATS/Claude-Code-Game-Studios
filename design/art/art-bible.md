@@ -1,8 +1,14 @@
 # Art Bible: Lux Aeterna
 
 *Created: 2026-04-21*
-*Status: Complete — Lean mode (AD-ART-BIBLE skipped)*
+*Status: Approved*
 *Engine: Godot 4.6 / GDScript / 2D Pixel Art*
+
+**AD-ART-BIBLE Sign-Off**
+> Verdict: **APPROVED**
+> Date: 2026-05-07
+> Review mode: Lean (AD-ART-BIBLE director gate skipped per `production/review-mode.txt`)
+> All 9 sections present and complete. Visual identity, mood grammar, shape language, color system, character direction, environment language, UI direction, asset standards, and reference direction are all authored and internally consistent. No blocking issues identified.
 
 ---
 
