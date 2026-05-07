@@ -6,7 +6,7 @@ goal: "Clear the remaining Pre-Production → Production gate blockers and lay t
 start: "2026-05-06"
 end: "2026-05-20"
 generated: "2026-05-06"
-updated: "2026-05-07"  # S1-04 and S1-05 marked done
+updated: "2026-05-07"  # S1-02, S1-03, S1-04, S1-05 marked done
 
 stories:
   # ── Must Have ──────────────────────────────────────────────────────────────
@@ -25,21 +25,21 @@ stories:
     name: "HUD UX Spec"
     file: "design/ux/hud.md"
     priority: must-have
-    status: ready-for-dev
+    status: done
     owner: ""
     estimate_days: 1.0
     blocker: ""
-    completed: ""
+    completed: "2026-05-07"
 
   - id: "S1-03"
     name: "Pause Menu UX Spec"
     file: "design/ux/pause.md"
     priority: must-have
-    status: ready-for-dev
+    status: done
     owner: ""
     estimate_days: 0.5
     blocker: ""
-    completed: ""
+    completed: "2026-05-07"
 
   - id: "S1-04"
     name: "Episode 1 Guest Character Visual Profile"
